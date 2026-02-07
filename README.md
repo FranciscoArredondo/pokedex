@@ -11,15 +11,6 @@ A terminal-based Pokédex built with Rust. Browse Gen 1 Pokémon, view colored s
 
 ## Install
 
-### From source
-
-```bash
-git clone https://github.com/rae89/pokedex.git
-cd pokedex
-cargo build --release
-./target/release/pokedex
-```
-
 ### Pre-built binary (macOS)
 
 Download `pokedex-macos.tar.gz` from [Releases](https://github.com/rae89/pokedex/releases), then:
@@ -29,6 +20,30 @@ tar -xzf pokedex-macos.tar.gz
 xattr -d com.apple.quarantine pokedex
 ./pokedex
 ```
+
+> The `xattr` command removes the macOS quarantine flag that blocks downloaded binaries. If you get "No such xattr", the file is already fine to run.
+
+### Build from source
+
+Requires [Rust](https://rustup.rs/) (1.70+).
+
+```bash
+git clone https://github.com/rae89/pokedex.git
+cd pokedex
+cargo build --release
+./target/release/pokedex
+```
+
+#### Build a universal macOS binary (Apple Silicon + Intel)
+
+```bash
+rustup target add x86_64-apple-darwin
+cargo build --release
+cargo build --release --target x86_64-apple-darwin
+lipo -create target/release/pokedex target/x86_64-apple-darwin/release/pokedex -output pokedex
+```
+
+The resulting `pokedex` binary works on both Apple Silicon and Intel Macs.
 
 ## Controls
 
