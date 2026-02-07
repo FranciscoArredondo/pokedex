@@ -89,3 +89,113 @@ impl Widget for &SpriteWidget {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{Rgba, RgbaImage};
+
+    fn create_test_image(width: u32, height: u32) -> DynamicImage {
+        let mut img = RgbaImage::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                let pixel = if (x + y) % 2 == 0 {
+                    Rgba([255, 0, 0, 255]) // Red
+                } else {
+                    Rgba([0, 0, 255, 255]) // Blue
+                };
+                img.put_pixel(x, y, pixel);
+            }
+        }
+        DynamicImage::ImageRgba8(img)
+    }
+
+    fn create_transparent_image(width: u32, height: u32) -> DynamicImage {
+        let mut img = RgbaImage::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                img.put_pixel(x, y, Rgba([0, 0, 0, 0])); // Transparent
+            }
+        }
+        DynamicImage::ImageRgba8(img)
+    }
+
+    #[test]
+    fn test_sprite_widget_from_image() {
+        let img = create_test_image(4, 4);
+        let widget = SpriteWidget::from_image(&img, 10, 10);
+        
+        // Should create cells (height/2 rows since we pair pixels)
+        assert!(!widget.cells.is_empty());
+    }
+
+    #[test]
+    fn test_sprite_widget_from_image_scaling() {
+        let img = create_test_image(20, 20);
+        let widget = SpriteWidget::from_image(&img, 10, 10);
+        
+        // Should scale down to fit max dimensions
+        assert!(widget.cells.len() <= 10);
+        if !widget.cells.is_empty() {
+            assert!(widget.cells[0].len() <= 10);
+        }
+    }
+
+    #[test]
+    fn test_sprite_widget_from_png_bytes() {
+        // Test with invalid bytes first
+        let invalid_bytes = b"not a png";
+        let widget = SpriteWidget::from_png_bytes(invalid_bytes, 10, 10);
+        assert!(widget.is_none());
+        
+        // Note: Testing with actual PNG encoding would require more complex setup
+        // The from_image method is tested separately, which covers the core logic
+    }
+
+
+    #[test]
+    fn test_to_color() {
+        let color = super::to_color((255, 128, 64));
+        match color {
+            Color::Rgb(r, g, b) => {
+                assert_eq!(r, 255);
+                assert_eq!(g, 128);
+                assert_eq!(b, 64);
+            }
+            _ => panic!("Expected Rgb color"),
+        }
+    }
+
+    #[test]
+    fn test_sample_pixel_within_bounds() {
+        let img = create_test_image(10, 10);
+        let pixel = super::sample_pixel(&img, 5, 5, 1.0);
+        assert!(pixel.is_some());
+    }
+
+    #[test]
+    fn test_sample_pixel_out_of_bounds() {
+        let img = create_test_image(10, 10);
+        let pixel = super::sample_pixel(&img, 20, 20, 1.0);
+        assert!(pixel.is_none());
+    }
+
+    #[test]
+    fn test_sample_pixel_transparent() {
+        let img = create_transparent_image(10, 10);
+        let pixel = super::sample_pixel(&img, 5, 5, 1.0);
+        assert!(pixel.is_none()); // Transparent pixels return None
+    }
+
+    #[test]
+    fn test_sprite_widget_from_image_single_pixel() {
+        let img = create_test_image(1, 1);
+        let widget = SpriteWidget::from_image(&img, 10, 10);
+        // Should handle small images gracefully - should create at least one cell row
+        // (height is made even, so 1 pixel becomes 2, which creates 1 row)
+        assert!(!widget.cells.is_empty());
+        assert_eq!(widget.cells.len(), 1);
+        // Verify the cell contains actual data (not empty)
+        assert!(!widget.cells[0].is_empty());
+    }
+}
